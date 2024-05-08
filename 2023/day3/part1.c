@@ -92,14 +92,14 @@ uint32_t parse_left_right(char *line, uint16_t position) {
 #ifdef DEBUG
         printf("Look forward\n");
 #endif
-        sum += parse_number_from_center(line, position);
+        sum = parse_number_from_center(line, position);
     } else {
         // get NE neighbor
         if (position > 0) {
 #ifdef DEBUG
         printf("Look East\n");
 #endif
-          sum += parse_number_reverse(line, position - 1);
+          sum = parse_number_reverse(line, position - 1);
         }
 
         // get NW neighbor
