@@ -3,7 +3,7 @@
 #include <stdint.h>
 #include <math.h>
 
-#define LINE_LENGTH 141 // should be enough for any elf schematic
+#define LINE_LENGTH 142 // should be enough for any elf schematic
 
 /*
  * Solver design for minimal memory usage:
@@ -15,8 +15,12 @@
  * Is it possible that a number is neighbor to two parts?
  */
 
-int clear_line(char *line) {
-    return sprintf(line, "%.*s", LINE_LENGTH, ".");
+void clear_line(char *line) {
+    // memset(line, '.', LINE_LENGTH); // another include? I'd rather loop it
+    for (uint8_t i = 0; i < LINE_LENGTH; i++)
+        line[i] = '.';
+
+    line[LINE_LENGTH - 1] = '\0';
 }
 
 int read_next_line(FILE *f, char *line) {
@@ -33,13 +37,17 @@ uint32_t parse_number_reverse(char *line, uint16_t position) {
     uint32_t sum = 0;
 
     while (isdigit(line[position])) {
-        sum += ((line[position] - '0') * 10 ^ number_of_digits);
+        sum += ((line[position] - '0') * pow(10, number_of_digits));
         number_of_digits++;
 
         if (position == 0)
             break;
         position--;
     }
+
+#ifdef DEBUG
+    printf("parse_number_reverse found %d\n", sum);
+#endif
 
     return sum;
 }
@@ -48,9 +56,13 @@ uint32_t parse_number_forward(char *line, uint16_t position) {
     uint32_t sum = 0;
 
     while (isdigit(line[position])) {
-        sum += sum * 10 + (line[position] - '0');
+        sum = sum * 10 + (line[position] - '0');
         position++;
     }
+
+#ifdef DEBUG
+    printf("parse_number_forward found %d\n", sum);
+#endif
 
     return sum;
 }
@@ -60,73 +72,102 @@ uint32_t parse_number_from_center(char *line, uint16_t position) {
    
     sum = parse_number_reverse(line, position);
 
-    if(isdigit(line[position + 1])) {
-        uint32_t right_part = 0;
+    position++;
+    while (position < LINE_LENGTH && isdigit(line[position])) {
+        sum = sum * 10 + (line[position] - '0');
+        position++;
+    }
 
-        right_part = parse_number_forward(line, position + 1);
-        
-        if (right_part == 0)
-            return sum * 10;
+#ifdef DEBUG
+    printf("parse_number_from_center found %d\n", sum);
+#endif
 
-        sum = sum * pow(10, floor(log10(right_part)) + 1) + right_part;
+    return sum;
+}
+
+uint32_t parse_left_right(char *line, uint16_t position) {
+    uint32_t sum = 0;
+
+    if (isdigit(line[position])) {
+#ifdef DEBUG
+        printf("Look forward\n");
+#endif
+        sum += parse_number_from_center(line, position);
+    } else {
+        // get NE neighbor
+        if (position > 0) {
+#ifdef DEBUG
+        printf("Look East\n");
+#endif
+          sum += parse_number_reverse(line, position - 1);
+        }
+
+        // get NW neighbor
+        if (position < LINE_LENGTH) {
+#ifdef DEBUG
+        printf("Look West\n");
+#endif
+           sum += parse_number_forward(line, position + 1);
+        }
     }
 
     return sum;
 }
 
-int parse_line(char *previous_line, char *current_line, char *next_line) {
+uint32_t parse_line(char *previous_line, char *current_line, char *next_line) {
     // iterate through line
     // if symbol found check E, W, N, S
     // if no values found in N, S, check NE, NW and SE, SW
     uint32_t sum = 0;
 
-    int is_line_beginning;
-    int is_line_end;
+#ifdef DEBUG
+    printf("\nparse line working set:\n");
+    printf("prev: %s\n", previous_line);
+    printf("curr: %s\n", current_line);
+    printf("next: %s\n", next_line);
+#endif
 
     for (uint16_t i = 0; i < LINE_LENGTH; i++) {
-        if (current_line[i] == '.' || current_line[i] == '\0')
+        if (current_line[i] < 32)
+            break;
+
+        if (current_line[i] == '.') 
             continue;
 
         if (isdigit(current_line[i]))
             continue;
 
-        is_line_beginning = (i == 0);
-        is_line_end = (i == LINE_LENGTH - 1);
+#ifdef DEBUG
+        printf("\nFound symbol %c (%d)\n", current_line[i], current_line[i]);
+#endif
 
         // we have a token
         // check the East
-        if (!is_line_beginning)
+        if (i > 0) {
+#ifdef DEBUG
+            printf("Look East\n");
+#endif
             sum += parse_number_reverse(current_line, i - 1);
+        }
 
         // chech the West
-        if (!is_line_end)
+        if (i < LINE_LENGTH) {
+#ifdef DEBUG
+            printf("Look West\n");
+#endif
             sum += parse_number_forward(current_line, i + 1);
-
-        if (isdigit(previous_line[i])) {
-            // get N neighbor
-            sum += parse_number_from_center(current_line, i);
-        } else {
-            // get NE neighbor
-            if (!is_line_beginning)
-                sum += parse_number_reverse(previous_line, i - 1);
-
-            // get NW neighbor
-            if (!is_line_end)
-                sum += parse_number_forward(previous_line, i + 1);
         }
 
-        if (isdigit(next_line[i])) {
-            // get S neighbor
-            sum += parse_number_from_center(current_line, i);
-        } else {
-            // get SE neighbor
-            if (!is_line_beginning)
-                sum += parse_number_reverse(next_line, i - 1);
+#ifdef DEBUG
+        printf("Look North\n");
+#endif
+        sum += parse_left_right(previous_line, i);
 
-            // get SW neighbor
-            if (!is_line_end)
-                sum += parse_number_forward(next_line, i + 1);
-        }
+#ifdef DEBUG
+        printf("Look South\n");
+#endif
+        sum += parse_left_right(next_line, i);
+
     }
 
     return sum;
@@ -151,6 +192,13 @@ int parse_file(FILE *f) {
     previous_line = line2;
     current_line = line0;
     next_line = line1;
+
+#ifdef DEBUG
+    printf("Initial configuration:\n");
+    printf("Line 0: %s\n", line0);
+    printf("Line 1: %s\n", line1);
+    printf("Line 2: %s\n", line2);
+#endif
 
     sum += parse_line(previous_line, current_line, next_line);
 
