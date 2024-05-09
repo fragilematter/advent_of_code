@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <ctype.h>
 #include <stdint.h>
-#include <math.h>
+#include <stdlib.h>
 
 #define LINE_LENGTH 142 // should be enough for any elf schematic
 
@@ -32,12 +32,32 @@ int read_next_line(FILE *f, char *line) {
     return 0;
 }
 
+uint32_t poormanspow10(uint8_t power_of) {
+    switch (power_of) {
+        case 0:
+            return 1;
+        case 1:
+            return 10;
+        case 2:
+            return 100;
+        case 3:
+            return 1000;
+        case 4:
+            return 10000;
+        default:
+            fprintf(stderr, "poormanspow10 called with invalid value %d\n", power_of);
+            exit(1);
+    }
+
+    return 0;
+}
+
 uint32_t parse_number_reverse(char *line, uint16_t position) {
     uint8_t number_of_digits = 0;
     uint32_t sum = 0;
 
     while (isdigit(line[position])) {
-        sum += ((line[position] - '0') * pow(10, number_of_digits));
+        sum += ((line[position] - '0') * poormanspow10(number_of_digits));
         number_of_digits++;
 
         if (position == 0)
