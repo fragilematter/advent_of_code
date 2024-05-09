@@ -34,7 +34,7 @@ int main(void) {
       if (fscanf(f, "%2s", winning_numbers[i].number) < 1)
         memcpy(winning_numbers[i].number, " 0", 2);
 #ifdef DEBUG
-        printf("Read winning number %s\n", winning_numbers[i].number);
+      printf("Read winning number %s\n", winning_numbers[i].number);
 #endif
     }
 
