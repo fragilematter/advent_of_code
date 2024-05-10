@@ -25,9 +25,12 @@ int main(void) {
   uint32_t total_cards = 0;
   struct number winning_numbers[WINNING_NUMBERS];
   char played_number[3];
-  uint16_t additional_cards[UINT8_MAX] = {0};
+  uint32_t additional_cards[UINT8_MAX] = {0};
   uint8_t card_index = 0;
   do {
+#ifdef DEBUG
+    printf("\nCurrent card: %d\n", card_index);
+#endif
     fseek(f, GAME_HEADER_SKIP_CHARS, SEEK_CUR);
 
     for (i = 0; i < WINNING_NUMBERS; i++) {
@@ -55,16 +58,30 @@ int main(void) {
           printf("Number is winning!\n");
 #endif
           winning_number_count++;
-          additional_cards[card_index + winning_number_count]++;
+          //additional_cards[card_index + winning_number_count] += 1 +
+          //    additional_cards[card_index];
+
           break;
         }
       }
     }
 #ifdef DEBUG
-    printf("Winning number count: %d\n\n", winning_number_count);
+     printf("Winning number count: %d\n", winning_number_count);
 #endif
 
+    for (j = 1; j <= winning_number_count; j++) {
+#ifdef DEBUG
+      printf("Index %d: %d + %d\n", card_index + j,
+              additional_cards[card_index + j], 
+              additional_cards[card_index] + 1);
+#endif
+      additional_cards[card_index + j] += 1 + additional_cards[card_index];
+    }
+
     total_cards += 1 + additional_cards[card_index];
+#ifdef DEBUG
+    printf("Total cards: %d\n", total_cards);
+#endif
     card_index++;
 no_number:
   } while (!feof(f));
