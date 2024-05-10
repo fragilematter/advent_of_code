@@ -1,6 +1,5 @@
 #include <stdint.h>
 #include <stdio.h>
-#include <string.h>
 
 #define WINNING_NUMBERS 10
 #define PLAYED_NUMBERS 25
@@ -31,8 +30,10 @@ int main(void) {
     fseek(f, GAME_HEADER_SKIP_CHARS, SEEK_CUR);
 
     for (i = 0; i < WINNING_NUMBERS; i++) {
-      if (fscanf(f, "%2s", winning_numbers[i].number) < 1)
-        memcpy(winning_numbers[i].number, " 0", 2);
+      if (fscanf(f, "%2s", winning_numbers[i].number) < 1) {
+        winning_numbers[i].number[0] = ' ';
+        winning_numbers[i].number[1] = '0';
+      }
 #ifdef DEBUG
       printf("Read winning number %s\n", winning_numbers[i].number);
 #endif
@@ -48,7 +49,8 @@ int main(void) {
       printf("Read played number %s\n", played_number);
 #endif
       for (j = 0; j < WINNING_NUMBERS; j++) {
-        if (strcmp(played_number, winning_numbers[j].number) == 0) {
+        if (played_number[0] == winning_numbers[j].number[0] &&
+            played_number[1] == winning_numbers[j].number[1]) {
 #ifdef DEBUG
           printf("Number is winning!\n");
 #endif
