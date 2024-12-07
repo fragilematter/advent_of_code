@@ -11,28 +11,65 @@ if (!File.Exists(args[0])) {
 }
 
 using var fs = File.OpenRead(args[0]);
-using var sr = new StreamReader(fs, Encoding.UTF8, true, 4096);
 
 uint result = 0;
+uint fullResult = 0;
+uint enabledResult = 0;
 char c;
+int readByte;
+bool enabled = true;
 
-while (!sr.EndOfStream) {
-    c = (char)sr.Read();
-    if (c != 'm') continue;
+while ((readByte = fs.ReadByte()) > -1) {
+    c = (char)readByte;
+    if (c != 'm' && c != 'd') continue;
 
-    result += MulTPass(sr);
+    if (c == 'd') {
+        enabled = EnabledChecker(fs, enabled);
+        continue;
+    }
+
+    result = MulTPass(fs);
+
+    fullResult += result;
+    if (enabled) enabledResult += result;
 }
 
-Console.WriteLine($"Result: {result}");
+Console.WriteLine($"Result: {fullResult}");
+Console.WriteLine($"Enabled result: {enabledResult}");
 
-static uint MulTPass(StreamReader sr) {
+static bool EnabledChecker(FileStream fs, bool previouslyEnabled) {
+    byte[] readBuffer = new byte[6];
+    char[] checkBuffer = new char[6];
+
+    if (fs.Read(readBuffer, 0, 6) == 0) 
+        return previouslyEnabled;
+
+    checkBuffer = Array.ConvertAll<byte, char>(readBuffer, c => (char)c);
+
+    if (checkBuffer.SequenceEqual("on't()"))
+        return false;
+
+    var doSlice = new ArraySegment<char>(checkBuffer, 0, 3);
+    if (doSlice.SequenceEqual("o()")) {
+        fs.Seek(-3, SeekOrigin.Current);
+
+        return true;
+    }
+
+    fs.Seek(-6, SeekOrigin.Current);
+
+    return previouslyEnabled;
+}
+
+static uint MulTPass(FileStream fs) {
     uint firstNum = 0;
     uint secondNum = 0;
     States state = States.State_M;
     char c;
+    int readByte;
 
-    while (!sr.EndOfStream) {
-        c = (char)sr.Read();
+    while ((readByte = fs.ReadByte()) > 0) {
+        c = (char)readByte;
 
         switch (state) {
             case States.State_M:
