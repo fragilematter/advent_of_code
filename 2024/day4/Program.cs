@@ -13,6 +13,7 @@ if (!File.Exists(args[0])) {
 ReadOnlySpan<String> fileContent = File.ReadAllLines(args[0]);
 ReadOnlySpan<char> lookingFor = "XMAS";
 uint christmasCount = 0;
+uint dashmasCount = 0;
 
 /*
  * Dir  X  Y
@@ -36,17 +37,56 @@ for (int yPos = 0; yPos < fileContent.Length; yPos++) {
         for (int direction = 0; direction < 8; direction++) {
             christmasCount += FoundChristmas(fileContent, lookingFor, xPos, yPos, direction, 0);
         }
+
+        if (fileContent[yPos][xPos] == 'A') {
+            dashmasCount += FoundDashmas(fileContent, xPos, yPos);
+        }
     }
 }
 
 Console.WriteLine($"{lookingFor} instances: {christmasCount}");
+Console.WriteLine($"X-MAS instances: {dashmasCount}");
+
+uint FoundDashmas(
+        ReadOnlySpan<String> fileContent,
+        int xPos, int yPos
+        ) 
+{
+    if (xPos == 0 || yPos == 0) return 0;
+    if (yPos + 1 == fileContent.Length) return 0;
+    if (xPos + 1 == fileContent[yPos].Length) return 0;
+
+    char top;
+    char bottom;
+
+    // ran out of patience for this one
+    top = fileContent[yPos - 1][xPos - 1];
+    bottom = fileContent[yPos + 1][xPos + 1];
+
+    if (!IsMas(top, bottom)) return 0;
+
+    top = fileContent[yPos - 1][xPos + 1];
+    bottom = fileContent[yPos + 1][xPos - 1];
+
+    if (!IsMas(top, bottom)) return 0;
+
+    return 1;
+}
+
+bool IsMas(char top, char bottom) {
+    if (top == 'M' && bottom == 'S') return true;
+    if (top == 'S' && bottom == 'M') return true;
+
+    return false;
+}
 
 uint FoundChristmas(
         ReadOnlySpan<String> fileContent, 
         ReadOnlySpan<char> lookingFor,
         int xPos, int yPos, 
         int direction, int offset
-    ) {
+        ) 
+{
 
     if (fileContent[xPos][yPos] != lookingFor[offset]) return 0;
     if (++offset == lookingFor.Length) return 1;
