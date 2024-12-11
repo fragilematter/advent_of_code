@@ -30,43 +30,59 @@ while (!String.IsNullOrEmpty(line = sr.ReadLine())) {
     }
 }
 
-foreach (var kvp in pageOrder) {
-    Console.WriteLine($"Page {kvp.Key} should appear before {string.Join(", ", kvp.Value)}");
-}
-
 uint middlePageTotal = 0;
+uint fixedPageTotal = 0;
 
 while(!String.IsNullOrEmpty(line = sr.ReadLine())) {
-    Console.WriteLine($"Processing list {line}");
-
     var parts = line.Split(',');
     var pageList = Array.ConvertAll(parts, uint.Parse);
-    bool lineIsValid = true;
 
+    if (!IsLineValid(pageList, pageOrder)) {
+        fixedPageTotal += GetFixedMid(pageList, pageOrder);
+        continue;
+    }
+
+    var middlePageIndex = (pageList.Length - 1) / 2;
+    middlePageTotal += pageList[middlePageIndex];
+}
+
+Console.WriteLine($"Valid list middle page sum is {middlePageTotal}");
+Console.WriteLine($"Fixed list middle page sum is {fixedPageTotal}");
+
+static bool IsLineValid(uint[] pageList, Dictionary<uint, List<uint>> pageOrder) {
     for (uint i = 1; i < pageList.Length; i++) {
-        List<uint> pageRules;
+        List<uint>? pageRules;
 
         if(!pageOrder.TryGetValue(pageList[i], out pageRules)) continue;
 
         for(uint j = 0; j < i; j++) {
             if(pageRules.Contains(pageList[j])) {
-                Console.WriteLine($"Page {pageList[i]} appears after {pageList[j]}");
-                lineIsValid = false;
-                break;
+                return false;
             }
         }
-
-        if (!lineIsValid) break;
     }
 
-    if (!lineIsValid) continue;
-
-    var middlePageIndex = (pageList.Length - 1) / 2;
-    middlePageTotal += pageList[middlePageIndex];
-    Console.WriteLine($"Line is valid, middle page is {pageList[middlePageIndex]}");
+    return true;
 }
 
-Console.WriteLine($"Valid list middle page sum is {middlePageTotal}");
+static uint GetFixedMid(uint[] pageArray, Dictionary<uint, List<uint>> pageOrder) {
+    var pageList = new List<uint>(pageArray);
+
+    pageList.Sort((x, y) => {
+            List<uint>? pageRules;
+
+            if (pageOrder.TryGetValue(x, out pageRules) && pageRules.Contains(y))
+                return -1;
+
+            if (pageOrder.TryGetValue(y, out pageRules) && pageRules.Contains(x))
+                return 1;
+
+            return 0;
+
+            });
+
+    return pageList[(pageList.Count - 1) / 2]; 
+}
 
 static void PrintHelp() {
     Console.WriteLine($"Usage: {System.AppDomain.CurrentDomain.FriendlyName} <INPUT_FILE>");
